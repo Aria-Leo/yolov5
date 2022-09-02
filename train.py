@@ -21,6 +21,7 @@ import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+import traceback
 
 import numpy as np
 import torch
@@ -628,7 +629,6 @@ def run(**kwargs):
     for k, v in kwargs.items():
         setattr(opt, k, v)
     main(opt)
-    return opt
 
 
 if __name__ == "__main__":
