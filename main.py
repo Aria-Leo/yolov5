@@ -20,7 +20,8 @@ import uvicorn
 import os
 import model_cfg
 from NumberRecognition import NumberRecognition
-from al_detect import ALDetector
+from PointerRecognition import PointerRecognition
+from data_process import ALDetector
 
 app = FastAPI()
 # 设置允许访问的域名
@@ -59,9 +60,10 @@ def pred_cur_num(item_id=None):
             img_arr = np.frombuffer(img_string, np.uint8)
             image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
             nr = NumberRecognition(model_cfg.model_path,
-                                   model_cfg.plate_model_name,
-                                   model_cfg.number_model_name)
-            status_code, predict_res = nr.predict(image)
+                                   model_cfg.gas_plate_model,
+                                   model_cfg.gas_number_model)
+            predict_df, status_code, predict_res = nr.predict(image)
+
             current_time = time.strftime('%Y-%m-%d %H:%M:%S')
             res = {
                 "time": current_time,
@@ -75,24 +77,32 @@ def pred_cur_num(item_id=None):
 
 
 @app.post("/recognition", tags=["get current gas meter predict number"])
-def pred_num(b64: str = Body(None, embed=True)):
+def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', embed=True)):
     """
     通过输入参数  camera_num ，对当面时间的摄像头进行预测
     :param b64: 图片base64地址
+    :param data_type: 数据类型
     :return:
     """
+    plate_model = model_cfg.gas_plate_model
+    number_model = model_cfg.gas_number_model
+    abnormal_save_folder = model_cfg.abnormal_save_folder_gas
+    recognition_class = NumberRecognition
+    if data_type == 'pressure':
+        plate_model = model_cfg.pressure_plate_model
+        number_model = model_cfg.pressure_pointer_model
+        abnormal_save_folder = model_cfg.abnormal_save_folder_pressure
+        recognition_class = PointerRecognition
     try:
         img_string = base64.b64decode(b64)
         img_arr = np.frombuffer(img_string, np.uint8)
         image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
-        nr = NumberRecognition(model_cfg.model_path,
-                               model_cfg.plate_model_name,
-                               model_cfg.number_model_name)
-        predict_df, status_code, predict_res = nr.predict(image)
+        pr = recognition_class(model_cfg.model_path, plate_model, number_model)
+        predict_df, status_code, predict_res = pr.predict(image)
         # status code大于0的存入abnormal_save_folder，后续需要人工重新标注
         if status_code > 0:
-            abnormal_save_image_path = os.path.join(model_cfg.model_path, model_cfg.abnormal_save_folder, 'images')
-            abnormal_save_label_path = os.path.join(model_cfg.model_path, model_cfg.abnormal_save_folder, 'labels')
+            abnormal_save_image_path = os.path.join(model_cfg.model_path, abnormal_save_folder, 'images')
+            abnormal_save_label_path = os.path.join(model_cfg.model_path, abnormal_save_folder, 'labels')
             if not os.path.exists(abnormal_save_image_path):
                 os.makedirs(abnormal_save_image_path)
             if not os.path.exists(abnormal_save_label_path):
@@ -104,8 +114,8 @@ def pred_num(b64: str = Body(None, embed=True)):
                 image_suffix = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-2]
 
             # 检测表盘
-            pr = nr.plate_model
-            plate_res = pr.predict(image)
+            plate_model = pr.plate_model
+            plate_res = plate_model.predict(image)
             cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'), plate_res)
 
             # 预测结果存储到txt文件
@@ -117,9 +127,12 @@ def pred_num(b64: str = Body(None, embed=True)):
         res = {
             "time": current_time,
             "status_code": status_code,
-            "valid_flag": True if 0 <= status_code <= 4 else False,
             "predict_number": predict_res
         }
+        if data_type == 'gas':
+            res['valid_flag'] = True if 0 <= status_code <= 4 else False
+        elif data_type == 'pressure':
+            res['valid_flag'] = True if status_code == 0 else False
         print(res)
         result = JSONResponse(status_code=200, content=res)
     except ValueError:

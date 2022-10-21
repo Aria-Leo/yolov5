@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-#@file: al_detect.py
+#@file: data_process.py
 #@time: 2022-07-21 16:05
 #@author: ywtai 
 #@contact: 632910913@qq.com
@@ -8,26 +8,29 @@
 #@desc:
 """
 import os
-import yaml
+# import yaml
 import shutil
 import numpy as np
 import model_cfg
-import train
+# import train
 from apscheduler.schedulers.background import BackgroundScheduler
 
 
 class ALDetector:
 
     @staticmethod
-    def abnormal_counts():
+    def abnormal_counts(data_type='gas'):
         """
         判断图片数量是否超过阈值，超过则删除时间较早的图片
         Returns:
 
         """
         print('start abnormal counts detecting')
-        abnormal_save_image_path = os.path.join(model_cfg.model_path, model_cfg.abnormal_save_folder, 'images')
-        abnormal_save_label_path = os.path.join(model_cfg.model_path, model_cfg.abnormal_save_folder, 'labels')
+        save_folder = model_cfg.abnormal_save_folder_gas
+        if data_type == 'pressure':
+            save_folder = model_cfg.abnormal_save_folder_pressure
+        abnormal_save_image_path = os.path.join(model_cfg.model_path, save_folder, 'images')
+        abnormal_save_label_path = os.path.join(model_cfg.model_path, save_folder, 'labels')
         if os.path.exists(abnormal_save_image_path) and os.path.exists(abnormal_save_label_path):
             img_list = os.listdir(abnormal_save_image_path)
             mark_idx = np.argsort([s.replace('.jpg', '').replace('img', '') for s in img_list])
@@ -46,6 +49,7 @@ class ALDetector:
         # }
         scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
         scheduler.add_job(self.abnormal_counts, 'cron', hour='7-19', minute='*/5')
+        scheduler.add_job(self.abnormal_counts, 'cron', hour='7-19', minute='*/5', kwargs={'data_type': 'pressure'})
         # scheduler.add_job(self.trigger_training, 'cron', hour='5-22/2')
         scheduler.start()
 

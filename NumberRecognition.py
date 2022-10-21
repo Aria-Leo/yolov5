@@ -120,7 +120,8 @@ class GasNumberRecognition:
 
         return pre_df, res
 
-    def check_result(self, predict_df, res, num_conf_threshold=0.8, max_number=6,
+    @staticmethod
+    def check_result(predict_df, res, num_conf_threshold=0.8, max_number=6,
                      number_length_min=(10, 3, 3, 2, 4, 6),
                      float_places=(4, 2, 2, 1, 1, 2)):
         # 主要校验小数位和数字长度的合法性
@@ -247,7 +248,8 @@ class GasPlateRecognition:
             res = crop[0]['im']
         return res
 
-    def check_result(self, res):
+    @staticmethod
+    def check_result(res):
         print(res.shape)
         abnormal_details, status_code = '', 0
         if len(res) == 0:
@@ -281,10 +283,10 @@ class NumberRecognition:
 
 
 if __name__ == '__main__':
-    model_path = 'D:\\demo\\yolov5'
-    plate_model_name = 'gas_plate-v2.pt'
-    number_model_name = 'gas_number.pt'
+    m_path = 'D:\\demo\\yolov5'
+    plate_m_name = 'gas_plate-v2.pt'
+    number_m_name = 'gas_number.pt'
     normal_image_path = 'D:\\demo\\GasMeterData\\images\\val\\img2000.jpg'
-    nr = NumberRecognition(model_path, plate_model_name, number_model_name)
+    nr = NumberRecognition(m_path, plate_m_name, number_m_name)
     pre_res = nr.predict(normal_image_path)
     print(pre_res)
