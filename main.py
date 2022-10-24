@@ -96,7 +96,7 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
     try:
         img_string = base64.b64decode(b64)
         img_arr = np.frombuffer(img_string, np.uint8)
-        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
         pr = recognition_class(model_cfg.model_path, plate_model, number_model)
         predict_df, status_code, predict_res = pr.predict(image)
         # status code大于0的存入abnormal_save_folder，后续需要人工重新标注
@@ -116,7 +116,7 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
             # 检测表盘
             plate_model = pr.plate_model
             plate_res = plate_model.predict(image)
-            cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'), plate_res)
+            cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'), plate_res[:, :, ::-1])
 
             # 预测结果存储到txt文件
             with open(os.path.join(abnormal_save_label_path, f'img{image_suffix}.txt'), 'w') as f:

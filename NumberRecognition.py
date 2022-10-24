@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from utils.metrics_extra import nms
 
 
 class GasNumberRecognition:
@@ -22,6 +23,7 @@ class GasNumberRecognition:
     def __init__(self, model_path=None, model_name=None, nms_conf=0.3, iou=0.25):
         self.model_path = model_path
         self.model_name = model_name
+        print('model path:', os.path.join(model_path, 'models_pt', model_name))
         if model_path is not None and model_name is not None:
             self.model = torch.hub.load(model_path, 'custom',
                                         path=os.path.join(model_path, 'models_pt', model_name),
@@ -73,6 +75,7 @@ class GasNumberRecognition:
     def predict_opt(self, image, inference_size=288):
         result = self.model(image, size=inference_size, augment=True)
         predict_df = result.pandas().xywhn[0]
+        predict_df = nms(predict_df)
         pre_df, res = pd.DataFrame(), np.array([])
         if not predict_df.empty:
             # 根据坐标构建特征对图片进行聚类，将数字分组
@@ -112,9 +115,6 @@ class GasNumberRecognition:
                 res.append(''.join(temp['name'].tolist()))
             res = np.array(res, dtype='U25')
 
-        # pre_df = pd.concat([pre_df.iloc[0:1], pre_df], ignore_index=True, sort=False)
-        # pre_df['confidence'] = 0.2
-        # res[0] = res[0][0] + res[0]
         print(pre_df)
         print(res)
 
@@ -250,7 +250,7 @@ class GasPlateRecognition:
 
     @staticmethod
     def check_result(res):
-        print(res.shape)
+        print('plate shape: ', res.shape)
         abnormal_details, status_code = '', 0
         if len(res) == 0:
             abnormal_details = '无识别结果'
@@ -268,8 +268,21 @@ class NumberRecognition:
         self.number_model = GasNumberRecognition(model_path, number_model_name)
 
     def predict(self, image):
+        """
+
+        Args:
+            image: RGB format
+
+        Returns:
+
+        """
         plate_res = self.plate_model.predict(image)
-        cv2.imwrite('data/images/current_gas_plate.jpg', plate_res)
+        if len(plate_res) > 0:
+            if not isinstance(image, str):
+                output_res = plate_res[:, :, ::-1]
+            else:
+                output_res = plate_res
+            cv2.imwrite('data/images/current_gas_plate.jpg', output_res)
         plate_abnormal_info = self.plate_model.check_result(plate_res)
         status_code, number_res = 0, []
         predict_df = pd.DataFrame()
@@ -284,9 +297,12 @@ class NumberRecognition:
 
 if __name__ == '__main__':
     m_path = 'D:\\demo\\yolov5'
-    plate_m_name = 'gas_plate-v2.pt'
-    number_m_name = 'gas_number.pt'
-    normal_image_path = 'D:\\demo\\GasMeterData\\images\\val\\img2000.jpg'
-    nr = NumberRecognition(m_path, plate_m_name, number_m_name)
-    pre_res = nr.predict(normal_image_path)
-    print(pre_res)
+    plate_m_name = 'gas_plate.pt'
+    number_m_name = 'gas_number-v3.pt'
+    normal_image_path = 'D:\\demo\\GasMeterData_pre\\active\\abnormal\\images\\img202210172302091608.jpg'
+    test_image_path = 'D:\\demo\\yolov5\\data\\images\\current_gas_plate.jpg'
+    number_model = GasNumberRecognition(m_path, number_m_name)
+    number_model.predict_opt(normal_image_path)
+    # nr = NumberRecognition(m_path, plate_m_name, number_m_name)
+    # pre_res = nr.predict(normal_image_path)
+    # print(pre_res)

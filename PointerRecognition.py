@@ -17,6 +17,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from collections import Counter
+from utils.metrics_extra import nms
 
 
 class PressurePointerRecognition:
@@ -33,9 +34,10 @@ class PressurePointerRecognition:
         self.model.conf = nms_conf
         self.model.iou = iou
 
-    def predict(self, image, inference_size=288):
+    def predict(self, image, inference_size=640):
         result = self.model(image, size=inference_size, augment=True)
         predict_df, scale_numbers, res = result.pandas().xywhn[0], None, None
+        predict_df = nms(predict_df)
         # 检查表盘中心、半指针、刻度和数字是否都存在，若不存在则不予检测
         valid_flag = 1
         if predict_df.empty:
@@ -161,7 +163,7 @@ class PressurePlateRecognition:
         self.model.conf = nms_conf
         self.model.max_det = max_det
 
-    def predict(self, image, crop_path=None, inference_size=800):
+    def predict(self, image, crop_path=None, inference_size=640):
         result = self.model(image, size=inference_size)
         if crop_path is not None:
             crop = result.crop(save=True, save_dir=crop_path)
@@ -193,7 +195,12 @@ class PointerRecognition:
 
     def predict(self, image):
         plate_res = self.plate_model.predict(image)
-        cv2.imwrite('data/images/current_pressure_plate.jpg', plate_res)
+        if len(plate_res) > 0:
+            if not isinstance(image, str):
+                output_res = plate_res[:, :, ::-1]
+            else:
+                output_res = plate_res
+            cv2.imwrite('data/images/current_pressure_plate.jpg', output_res)
         plate_abnormal_info = self.plate_model.check_result(plate_res)
         status_code, number_res = 0, None
         predict_df = pd.DataFrame()
@@ -211,14 +218,14 @@ if __name__ == '__main__':
     plate_m_name = 'pressure_plate-v2.pt'
     pointer_m_name = 'pressure_pointer-v1.pt'
     abnormal_image_path = 'D:\\demo\\PressureMeterData\\noise\\test3.jpg'
-    normal_image_path = 'D:\\demo\\PressureMeterData\\PlateDataV2\\images\\val\\img1.jpg'
+    normal_image_path = 'D:\\demo\\PressureMeterData\\PlateDataV2\\images\\val\\img31.jpg'
     im = cv2.imread(normal_image_path)
     b = cv2.imencode('.jpg', im)[1]
     # b64 = str(base64.b64encode(b))[2:-1]
     b64 = str(base64.b64encode(b), 'utf-8')
     dim = base64.b64decode(b64)
     img_arr = np.frombuffer(dim, np.uint8)
-    im = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+    im = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]
     nr = PointerRecognition(m_path, plate_m_name, pointer_m_name)
     pre_res = nr.predict(im)
     for item in pre_res:

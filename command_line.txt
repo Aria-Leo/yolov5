@@ -1,4 +1,4 @@
-燃气表数字训练 --img 288 --batch 20 --epochs 500 --data GasMeterAp.yaml --weights models_pt\gas_number.pt --optimizer AdamW --multi-scale --rect
+燃气表数字训练 --img 288 --batch 10 --epochs 500 --data GasMeterAp.yaml --weights models_pt\gas_number-v2.pt --optimizer AdamW --multi-scale --rect --patience 50
 燃气表表盘训练 --img 800 --batch 5 --epochs 500 --data GasMeterPlate.yaml --weights models_pt\gas_plate.pt --optimizer AdamW --multi-scale --rect
 压力表表盘训练 --img 640 --batch 5 --epochs 2000 --data PressureMeterPlate.yaml --weights models_pt\pressure_plate-v2.pt --optimizer AdamW --multi-scale --rect --noplots --patience 200
 压力表指针训练 --img 640 --batch 10 --epochs 10000 --data PressureMeterPointer.yaml --weights yolov5s.pt --optimizer AdamW --multi-scale --rect --patience 2000
