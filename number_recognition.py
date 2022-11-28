@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-#@file: NumberRecognition.py
+#@file: number_recognition.py
 #@time: 2022-07-12 18:58
 #@author: ywtai
 #@contact: 632910913@qq.com
@@ -204,21 +204,28 @@ class GasNumberRecognition:
                     if len(drop_idx) > 0:
                         current_df = current_df.drop(index=drop_idx)
 
-                # 针对第一行的结果，必须保证所有的数字置信度大于指定阈值才输出
+                # 针对第一行的结果，必须保证所有的数字置信度大于指定阈值且个数符合条件才输出
                 if i == 0 and (not current_df[(current_df['name'] != '.')
                                               & (current_df['confidence'] < num_conf_threshold)].empty
-                               or len(res[i]) - 1 > number_length_min[i]):
-                    abnormal_details = '识别数字多于期望个数，且校正后的数字置信度依旧低于指定阈值'
+                               or len(res[i]) - 1 != number_length_min[i]):
+                    abnormal_details = '识别数字不等于期望个数，或校正后的数字置信度依旧低于指定阈值'
                     status_code = 5
 
             if iter_counts == 1 and status_code == 0:
-                abnormal_details = '总量已校正，但存在整组数字未识别的情况'
+                abnormal_details = '总量已校正，但存在整组数字未识别或识别组数超过最大值的情况'
                 status_code = 2
 
             # 检验置信度
             if not predict_df[predict_df['confidence'] < num_conf_threshold - 0.2].empty and status_code == 0:
                 abnormal_details = '存在置信度低于阈值的识别数字'
                 status_code = 1
+
+            # 当检验数字个数超过max_number时，只保留置信度最高的几组
+            # if len(res) > max_number:
+            #     confidence_s = predict_df.groupby('cluster_id').mean()['confidence']
+            #     class_sort_idx = confidence_s.sort_values(ascending=False)[:max_number].index.values
+            #     res = res[class_sort_idx]
+            #     predict_df = predict_df.iloc[class_sort_idx]
 
         return abnormal_details, status_code
 
@@ -296,7 +303,7 @@ class NumberRecognition:
 
 
 if __name__ == '__main__':
-    m_path = 'D:\\demo\\yolov5'
+    m_path = 'D:\\demo\\recognition'
     plate_m_name = 'gas_plate.pt'
     number_m_name = 'gas_number-v3.pt'
     normal_image_path = 'D:\\demo\\GasMeterData_pre\\active\\abnormal\\images\\img202210172302091608.jpg'

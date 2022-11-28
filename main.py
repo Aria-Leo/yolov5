@@ -19,8 +19,9 @@ import numpy as np
 import uvicorn
 import os
 import model_cfg
-from NumberRecognition import NumberRecognition
-from PointerRecognition import PointerRecognition
+from audio_recognition import AudioRecognition
+from number_recognition import NumberRecognition
+from pointer_recognition import PointerRecognition
 from data_process import ALDetector
 
 app = FastAPI()
@@ -136,7 +137,40 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
         print(res)
         result = JSONResponse(status_code=200, content=res)
     except ValueError:
-        result = HTTPException(status_code=404, detail="请输入有效的base64地址!")
+        result = HTTPException(status_code=404, detail="请输入有效的base64图片!")
+    return result
+
+
+@app.post("/audio", tags=["get audio analysis"])
+def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', embed=True)):
+    try:
+        save_path = os.path.join('data', 'audio')
+        temp_file = os.path.join(save_path, 'temp.WAV')
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        wav_file = open(temp_file, "wb")
+        decode_string = base64.b64decode(b64)
+        wav_file.write(decode_string)
+        res = {}
+        if data_type == 'amplitude':
+            ar_obj = AudioRecognition(temp_file, sr=100)
+            time_arr, audio_arr = ar_obj.get_amplitude_curve(list_format=True)
+            res = {
+                'time': time_arr,
+                'amplitude': audio_arr
+            }
+        elif data_type == 'spectrogram':
+            ar_obj = AudioRecognition(temp_file)
+            freq_arr, time_arr, xdb = ar_obj.get_spectrogram(
+                list_format=True, n_fft=512, hop_length=800)
+            res = {
+                'frequency': freq_arr,
+                'time': time_arr,
+                'spectrogram': xdb
+            }
+        result = JSONResponse(status_code=200, content=res)
+    except ValueError:
+        result = HTTPException(status_code=404, detail="请输入有效的base64音频!")
     return result
 
 

@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-#@file: NumberRecognition.py
+#@file: number_recognition.py
 #@time: 2022-07-12 18:58
 #@author: ywtai
 #@contact: 632910913@qq.com
@@ -214,7 +214,7 @@ class PointerRecognition:
 
 
 if __name__ == '__main__':
-    m_path = 'D:\\demo\\yolov5'
+    m_path = 'D:\\demo\\recognition'
     plate_m_name = 'pressure_plate-v2.pt'
     pointer_m_name = 'pressure_pointer-v1.pt'
     abnormal_image_path = 'D:\\demo\\PressureMeterData\\noise\\test3.jpg'
