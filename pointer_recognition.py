@@ -195,12 +195,12 @@ class PointerRecognition:
 
     def predict(self, image):
         plate_res = self.plate_model.predict(image)
-        if len(plate_res) > 0:
-            if not isinstance(image, str):
-                output_res = plate_res[:, :, ::-1]
-            else:
-                output_res = plate_res
-            cv2.imwrite('data/images/current_pressure_plate.jpg', output_res)
+        # if len(plate_res) > 0:
+        #     if not isinstance(image, str):
+        #         output_res = plate_res[:, :, ::-1]
+        #     else:
+        #         output_res = plate_res
+        #     cv2.imwrite('data/images/current_pressure_plate.jpg', output_res)
         plate_abnormal_info = self.plate_model.check_result(plate_res)
         status_code, number_res = 0, None
         predict_df = pd.DataFrame()

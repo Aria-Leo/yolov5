@@ -3,7 +3,7 @@
 压力表表盘训练 --img 640 --batch 5 --epochs 2000 --data PressureMeterPlate.yaml --weights models_pt\pressure_plate-v2.pt --optimizer AdamW --multi-scale --rect --noplots --patience 200
 压力表指针训练 --img 640 --batch 5 --epochs 1000 --data PressureMeterPointer.yaml --weights models_pt\pressure_pointer-v1.pt --optimizer AdamW --multi-scale --rect --patience 100
 
-燃气表数字识别 --img 288 --weights $FileDir$\models_pt\gas_number.pt --source D:\demo\GasMeterNumber\images\test --data $FileDir$\data\GasMeterAp.yaml  --conf-thres 0.5 --hide-conf --line-thickness 1 --save-txt
+燃气表数字识别 --img 288 --weights $FileDir$\models_pt\gas_number-v3.pt --source D:\demo\GasData\GasMeterNumber\images\val --conf-thres 0.5 --hide-conf --line-thickness 1 --save-txt
 压力表表盘识别 --img 640 --weights $FileDir$\models_pt\pressure_plate-v2.pt --source D:\demo\PressureMeterData\pressure_meter --conf-thres 0.7 --max-det 1 --save-crop --augment
 燃气表表盘识别 --img 800 --weights $FileDir$\models_pt\gas_plate.pt --source D:\demo\GasMeterData\images\val --conf-thres 0.7 --save-crop --max-det 1
 docker run -d -p 8088:8088 -v /root/yolov5:/usr/src/yolov5 -v /root/GasMeterNumber:/usr/src/GasMeterNumber --name yolov5 yolov5:v3

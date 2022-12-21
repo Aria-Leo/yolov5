@@ -151,6 +151,7 @@ def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', 
         wav_file = open(temp_file, "wb")
         decode_string = base64.b64decode(b64)
         wav_file.write(decode_string)
+        wav_file.close()
         res = {}
         if data_type == 'amplitude':
             ar_obj = AudioRecognition(temp_file, sr=100)
