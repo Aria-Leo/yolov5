@@ -9,6 +9,7 @@
 """
 import base64
 import cv2
+from collections import defaultdict, deque
 from fastapi import FastAPI, HTTPException, Body
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware  # 引入 CORS中间件模块
@@ -35,6 +36,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # 设置允许跨域的http方法，比如 get、post、put等。
     allow_headers=["*"])  # 允许跨域的headers，可以用来鉴别来源等作用。
+
+cache_dict = defaultdict(deque)
+max_cache_length = 30
 
 
 # ------ 获取当前时间下，摄像头获取的图像的燃气表数值 ------
@@ -78,11 +82,13 @@ def pred_cur_num(item_id=None):
 
 
 @app.post("/recognition", tags=["get current gas meter predict number"])
-def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', embed=True)):
+def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', embed=True),
+             item_id: str = Body(None, embed=True)):
     """
     通过输入参数  camera_num ，对当面时间的摄像头进行预测
     :param b64: 图片base64地址
     :param data_type: 数据类型
+    :param item_id: 图片标识，用于缓存队列校验使用
     :return:
     """
     plate_model = model_cfg.gas_plate_model
@@ -100,6 +106,29 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
         image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
         pr = recognition_class(model_cfg.model_path, plate_model, number_model)
         predict_df, status_code, predict_res = pr.predict(image)
+
+        # 缓存历史值校验总量
+        if data_type == 'gas' and item_id is not None:
+            max_volume_per_hour = 100
+            if item_id not in cache_dict and status_code == 0:
+                cache_dict[item_id].append(float(predict_res[0]))
+            elif item_id in cache_dict:
+                first_read = cache_dict[item_id][0]
+                before_read = cache_dict[item_id][-1]
+                current_read = float(predict_res[0]) if 0 <= status_code <= 4 else -1
+                if (current_read < max(first_read, before_read)
+                        or current_read - first_read >= max_volume_per_hour) and status_code != 0:
+                    add_num = np.diff(cache_dict[item_id]).mean()
+                    if np.isnan(add_num) or add_num >= max_volume_per_hour / 2:
+                        add_num = 0
+                    current_read = before_read + add_num
+                    predict_res[0] = f'{current_read:.4f}'
+                    status_code = 10
+                cache_dict[item_id].append(round(current_read, 4))
+                if len(cache_dict[item_id]) > max_cache_length:
+                    cache_dict[item_id].popleft()
+            print('cache_dict: ', cache_dict)
+
         # status code大于0的存入abnormal_save_folder，后续需要人工重新标注
         if status_code > 0:
             abnormal_save_image_path = os.path.join(model_cfg.model_path, abnormal_save_folder, 'images')
@@ -131,7 +160,7 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
             "predict_number": predict_res
         }
         if data_type == 'gas':
-            res['valid_flag'] = True if 0 <= status_code <= 4 else False
+            res['valid_flag'] = True if 0 <= status_code <= 4 or status_code == 10 else False
         elif data_type == 'pressure':
             res['valid_flag'] = True if status_code == 0 else False
         print(res)
@@ -143,6 +172,15 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
 
 @app.post("/audio", tags=["get audio analysis"])
 def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', embed=True)):
+    """
+    音频识别，返回声谱图和声压振幅曲线数据
+    Args:
+        b64: base64格式的图片数据
+        data_type: amplitude | spectrogram
+
+    Returns:
+
+    """
     try:
         save_path = os.path.join('data', 'audio')
         temp_file = os.path.join(save_path, 'temp.WAV')

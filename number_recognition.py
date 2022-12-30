@@ -73,6 +73,19 @@ class GasNumberRecognition:
         return predict_df, res
 
     def predict_opt(self, image, inference_size=288):
+        """
+        根据输入的图片返回识别读数
+        输入图片为表盘识别的输出结果
+        Args:
+            image: RGB format, shape=(height, width, 3)
+            inference_size: 推理时输入的图片大小
+
+        Returns:
+            pre_df, res
+            pre_df: pd.DataFrame，包含每个数字识别框的xywh和置信度等信息
+            res: list，燃气表各个读数的识别结果，从上到下，从左到右的顺序放入res中
+
+        """
         result = self.model(image, size=inference_size, augment=True)
         predict_df = result.pandas().xywhn[0]
         predict_df = nms(predict_df)
@@ -124,6 +137,21 @@ class GasNumberRecognition:
     def check_result(predict_df, res, num_conf_threshold=0.8, max_number=6,
                      number_length_min=(10, 3, 3, 2, 4, 6),
                      float_places=(4, 2, 2, 1, 1, 2)):
+        """
+        根据读数的分布规律，校验识别结果是否符合燃气表的读数格式，其中对res[0](总量)的校验最严格
+        Args:
+            predict_df: 对应predict的输出
+            res: 对应predict的输出
+            num_conf_threshold: 置信度阈值，总量中的数字必须都大于该值
+            max_number: 指定图片中最多有几组数字
+            number_length_min: 指定每组数字读数的最短长度，符合实际情况
+            float_places: 燃气表每个读数保留几位小数是固定的，可指定各个读数保留小数的个数，便于校验
+
+        Returns:
+            abnormal_details(异常具体内容), status_code(异常状态码，与abnormal_details相对应)
+            status_code 0-4认为总量的识别比较准确
+
+        """
         # 主要校验小数位和数字长度的合法性
         abnormal_details, status_code = '', 0
         if len(res) == 0:
@@ -245,6 +273,16 @@ class GasPlateRecognition:
         self.model.max_det = max_det
 
     def predict(self, image, crop_path=None, inference_size=800):
+        """
+        根据输入图片，识别表盘所在的区域
+        Args:
+            image:
+            crop_path:
+            inference_size:
+
+        Returns:
+
+        """
         result = self.model(image, size=inference_size)
         if crop_path is not None:
             crop = result.crop(save=True, save_dir=crop_path)
@@ -257,6 +295,15 @@ class GasPlateRecognition:
 
     @staticmethod
     def check_result(res):
+        """
+        检查是否检测出了表盘，给出对应的状态码
+        Args:
+            res: 对应predict的输出
+
+        Returns:
+           abnormal_details, status_code
+
+        """
         print('plate shape: ', res.shape)
         abnormal_details, status_code = '', 0
         if len(res) == 0:
@@ -276,7 +323,7 @@ class NumberRecognition:
 
     def predict(self, image):
         """
-
+        根据输入图片，返回识别结果和对应的状态码
         Args:
             image: RGB format
 

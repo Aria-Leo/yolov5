@@ -15,6 +15,17 @@ class AudioRecognition:
         self.audio, self.sr = librosa.load(audio_path, sr=sr)
 
     def get_amplitude_curve(self, plot=False, save_path=None, list_format=False, q=4):
+        """
+        返回声压振幅曲线数据
+        Args:
+            plot: 是否返回实时图片
+            save_path: 默认为None，不为None时表示曲线图片存储到本地的路径
+            list_format: 返回结果是否设置为python原生list格式
+            q: 返回数据保留几位小数
+
+        Returns: time_arr(时间序列), audio(声压振幅序列)
+
+        """
         if plot:
             plt.figure(figsize=(15, 10))
             librosa.display.waveshow(self.audio, sr=self.sr)
@@ -37,6 +48,20 @@ class AudioRecognition:
 
     def get_spectrogram(self, n_fft=1024, win_length=None, hop_length=None,
                         plot=False, save_path=None, list_format=False, q=4):
+        """
+        返回声谱图曲线对应的序列数据
+        Args:
+            n_fft: n_fft / 2 + 1对应返回值的函数，也是采样频率值的个数
+            win_length: stft(短时傅里叶变换)中每个时间片窗口的长度
+            hop_length: 每2个时间片之间的间隔
+            plot: 是否在运行时展示声谱图
+            save_path: 是否存储声谱图对应图片到本地
+            list_format: 返回结果是否设置为python原生list格式
+            q: 返回结果保留几位小数
+
+        Returns: freq_arr(采集频率序列), time_arr(时间序列), xdb(二维矩阵，纵轴为频率序列，横轴为时间序列，值为对应的dB)
+
+        """
         if win_length is None:
             win_length = n_fft
         if hop_length is None:

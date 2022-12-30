@@ -35,6 +35,20 @@ class PressurePointerRecognition:
         self.model.iou = iou
 
     def predict(self, image, inference_size=640):
+        """
+        根据输入的图片返回指针识别读数
+        输入图片为表盘识别的输出结果
+        Args:
+            image: RGB format, shape=(height, width, 3)
+            inference_size: 推理时输入的图片大小
+
+        Returns:
+            predict_df, scale_numbers, res
+            predict_df: pd.DataFrame，包含每个数字识别框的xywh和置信度等信息
+            scale_numbers: list 表盘内的刻度值序列（顺时针顺序存储）
+            res: float 识别结果
+
+        """
         result = self.model(image, size=inference_size, augment=True)
         predict_df, scale_numbers, res = result.pandas().xywhn[0], None, None
         predict_df = nms(predict_df)
@@ -138,6 +152,15 @@ class PressurePointerRecognition:
 
     @staticmethod
     def check_result(scale_numbers, res):
+        """
+        检查刻度和读数识别是否准确
+        Args:
+            scale_numbers:
+            res:
+
+        Returns:
+
+        """
         abnormal_details, status_code = '', 0
         if res is None:
             abnormal_details = '无识别结果，表盘中心、指针或刻度值缺失'
@@ -164,6 +187,16 @@ class PressurePlateRecognition:
         self.model.max_det = max_det
 
     def predict(self, image, crop_path=None, inference_size=640):
+        """
+        根据原始输入图片，返回表盘识别区域
+        Args:
+            image: (height, width, 3)
+            crop_path: 截取表盘图片存储路径
+            inference_size:
+
+        Returns:
+
+        """
         result = self.model(image, size=inference_size)
         if crop_path is not None:
             crop = result.crop(save=True, save_dir=crop_path)
@@ -194,6 +227,15 @@ class PointerRecognition:
         self.number_model = PressurePointerRecognition(model_path, number_model_name)
 
     def predict(self, image):
+        """
+        根据输入图片，返回指针读数识别结果
+        表盘识别+指针读数识别封装
+        Args:
+            image:
+
+        Returns:
+
+        """
         plate_res = self.plate_model.predict(image)
         # if len(plate_res) > 0:
         #     if not isinstance(image, str):
