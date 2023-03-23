@@ -57,14 +57,29 @@ class ALDetector:
 class DataTransform:
 
     @staticmethod
-    def cvat_to_yolo(data_path, out_path, train_split=0.8, data_limit=(5000, 1000)):
+    def cvat_to_yolo(data_path, out_path, train_split=0.8, data_limit=(5000, 1000), select_mode='sort'):
+        """
+
+        Args:
+            data_path:
+            out_path:
+            train_split:
+            data_limit:
+            select_mode:
+
+        Returns:
+
+        """
         doc_list = os.listdir(data_path)
         images = np.array([x for x in doc_list if '.txt' not in x])
         # 数据分为训练集和验证集（用最新的数据做验证集）
-        keys = [x.split('.')[0].lstrip('img') for x in images]
-        sort_key_idx = np.argsort(keys)
+        if select_mode == 'sort':
+            keys = [x.split('.')[0].lstrip('img') for x in images]
+            key_idx = np.argsort(keys)
+        else:
+            key_idx = np.random.permutation(images.shape[0])
         t_split = int(len(images) * train_split)
-        train_idx, val_idx = sort_key_idx[:t_split], sort_key_idx[t_split + 1:]
+        train_idx, val_idx = key_idx[:t_split], key_idx[t_split + 1:]
         train_images, val_images = images[train_idx], images[val_idx]
         train_labels = [x.replace('jpg', 'txt') for x in train_images]
         val_labels = [x.replace('jpg', 'txt') for x in val_images]
@@ -83,7 +98,11 @@ class DataTransform:
         train_image_list = os.listdir(train_image_path)
         val_image_list = os.listdir(val_image_path)
         if len(train_image_list) > data_limit[0]:
-            mark_idx = np.argsort([s.replace('.jpg', '').replace('img', '') for s in train_image_list])
+            if select_mode == 'sort':
+                mark_idx = np.argsort([s.replace('.jpg', '').replace('img', '')
+                                       for s in train_image_list])
+            else:
+                mark_idx = np.random.permutation(len(train_image_list))
             delete_counts = len(train_image_list) - data_limit[0]
             delete_arr = np.array(train_image_list)[mark_idx][:delete_counts]
             for fi in delete_arr:
@@ -91,7 +110,11 @@ class DataTransform:
                 os.remove(os.path.join(train_label_path, fi.replace('jpg', 'txt')))
 
         if len(val_image_list) > data_limit[1]:
-            mark_idx = np.argsort([s.replace('.jpg', '').replace('img', '') for s in val_image_list])
+            if select_mode == 'sort':
+                mark_idx = np.argsort([s.replace('.jpg', '').replace('img', '')
+                                       for s in val_image_list])
+            else:
+                mark_idx = np.random.permutation(len(val_image_list))
             delete_counts = len(val_image_list) - data_limit[1]
             delete_arr = np.array(val_image_list)[mark_idx][:delete_counts]
             for fi in delete_arr:
@@ -100,6 +123,6 @@ class DataTransform:
 
 
 if __name__ == '__main__':
-    input_path = 'D:\\demo\\GasMeterData_pre\\at_v1\\obj_train_data'
-    out_path = 'D:\\demo\\GasMeterNumber'
-    DataTransform().cvat_to_yolo(input_path, out_path)
+    input_path = r'D:\demo\PressureMeterData\mp_train2\obj_train_data'
+    o_path = r'D:\demo\PressureMeterData\MeterPointerV2'
+    DataTransform().cvat_to_yolo(input_path, o_path, select_mode='random')

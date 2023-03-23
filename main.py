@@ -122,7 +122,10 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
                     if np.isnan(add_num) or add_num >= max_volume_per_hour / 2:
                         add_num = 0
                     current_read = before_read + add_num
-                    predict_res[0] = f'{current_read:.4f}'
+                    if len(predict_res) > 0:
+                        predict_res[0] = f'{current_read:.4f}'
+                    else:
+                        predict_res.append(f'{current_read:.4f}')
                     status_code = 10
                 cache_dict[item_id].append(round(current_read, 4))
                 if len(cache_dict[item_id]) > max_cache_length:
@@ -146,12 +149,21 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
             # 检测表盘
             plate_model = pr.plate_model
             plate_res = plate_model.predict(image)
-            cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'), plate_res[:, :, ::-1])
+            if len(plate_res) > 0:
+                cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'),
+                            plate_res[:, :, ::-1])
 
-            # 预测结果存储到txt文件
-            with open(os.path.join(abnormal_save_label_path, f'img{image_suffix}.txt'), 'w') as f:
-                for _, s in predict_df.iterrows():
-                    f.write(f'{s["class"]} {s["xcenter"]:.6f} {s["ycenter"]:.6f} {s["width"]:.6f} {s["height"]:.6f}\n')
+                # 预测结果存储到txt文件
+                with open(os.path.join(abnormal_save_label_path, f'img{image_suffix}.txt'), 'w') as f:
+                    for _, s in predict_df.iterrows():
+                        label_class = f'{s["class"]}'
+                        label_xcenter = f'{s["xcenter"]:.6f}'
+                        label_ycenter = f'{s["ycenter"]:.6f}'
+                        label_width = f'{s["width"]:.6f}'
+                        label_height = f'{s["height"]:.6f}'
+                        label = ' '.join([label_class, label_xcenter,
+                                          label_ycenter, label_width, label_height])
+                        f.write(f'{label}\n')
 
         current_time = time.strftime('%Y-%m-%d %H:%M:%S')
         res = {
