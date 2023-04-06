@@ -228,4 +228,4 @@ def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', 
 if __name__ == '__main__':
     # pred_cur_num('474902489004576')
     ALDetector().run()
-    uvicorn.run(app='main:app', host="0.0.0.0", port=8088, debug=True)
+    uvicorn.run(app='main:app', host="0.0.0.0", port=8088)

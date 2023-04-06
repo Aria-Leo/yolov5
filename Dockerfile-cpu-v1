@@ -11,15 +11,15 @@ ADD https://ultralytics.com/assets/Arial.ttf https://ultralytics.com/assets/Aria
 # Install linux packages
 RUN apt update
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt install -y tzdata
-RUN apt install --no-install-recommends -y zip curl htop libgl1-mesa-glx libglib2.0-0 libpython3.9-dev
+RUN apt install --no-install-recommends -y zip curl htop libgl1-mesa-glx libglib2.0-0 libpython3.9-dev libsndfile1
 # RUN alias python=python3
 
 # Create working directory
-RUN mkdir -p /usr/src/yolov5
-WORKDIR /usr/src/yolov5
+RUN mkdir -p /usr/src/recognition
+WORKDIR /usr/src/recognition
 
 # Copy contents
-COPY ./yolov5 .
+COPY . .
 
 # Install pip packages
 RUN python3 -m pip install --upgrade pip
