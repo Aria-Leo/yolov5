@@ -252,7 +252,7 @@ class PointerRecognition:
             status_code = number_abnormal_info[1]
         else:
             status_code = plate_abnormal_info[1]
-        return predict_df, status_code, number_res
+        return plate_res, predict_df, status_code, number_res
 
 
 if __name__ == '__main__':

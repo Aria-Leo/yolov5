@@ -105,7 +105,7 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
         img_arr = np.frombuffer(img_string, np.uint8)
         image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
         pr = recognition_class(model_cfg.model_path, plate_model, number_model)
-        predict_df, status_code, predict_res = pr.predict(image)
+        plate_res, predict_df, status_code, predict_res = pr.predict(image)
 
         # 缓存历史值校验总量
         if data_type == 'gas' and item_id is not None:
@@ -147,8 +147,6 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
                 image_suffix = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-2]
 
             # 检测表盘
-            plate_model = pr.plate_model
-            plate_res = plate_model.predict(image)
             if len(plate_res) > 0:
                 cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'),
                             plate_res[:, :, ::-1])
