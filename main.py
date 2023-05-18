@@ -210,12 +210,13 @@ def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', 
             }
         elif data_type == 'spectrogram':
             ar_obj = AudioRecognition(temp_file)
-            freq_arr, time_arr, xdb = ar_obj.get_spectrogram(
+            freq_arr, time_arr, xdb, db_max = ar_obj.get_spectrogram(
                 list_format=True, n_fft=512, hop_length=800)
             res = {
                 'frequency': freq_arr,
                 'time': time_arr,
-                'spectrogram': xdb
+                'spectrogram': xdb,
+                'db_max': db_max
             }
         result = JSONResponse(status_code=200, content=res)
     except ValueError:

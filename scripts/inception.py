@@ -29,7 +29,7 @@ class InceptionV3(nn.Module):
     }
 
     def __init__(self,
-                 output_blocks=[DEFAULT_BLOCK_INDEX],
+                 output_blocks=None,
                  resize_input=True,
                  normalize_input=True,
                  requires_grad=False,
@@ -66,6 +66,8 @@ class InceptionV3(nn.Module):
         """
         super(InceptionV3, self).__init__()
 
+        if output_blocks is None:
+            output_blocks = [self.DEFAULT_BLOCK_INDEX]
         self.resize_input = resize_input
         self.normalize_input = normalize_input
         self.output_blocks = sorted(output_blocks)

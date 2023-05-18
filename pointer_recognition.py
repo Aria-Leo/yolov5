@@ -70,8 +70,18 @@ class PressurePointerRecognition:
             center_c = predict_df[predict_df['name'] == 'center'][['xcenter', 'ycenter']].values[0]
             pointer_xywh = predict_df[predict_df['name'] == 'semi-pointer'][
                 ['xcenter', 'ycenter', 'width', 'height']].values[0]
-            pointer_tip_c = np.array([pointer_xywh[0] - 1 / 2 * pointer_xywh[2],
-                                      pointer_xywh[1] - 1 / 2 * pointer_xywh[3]])
+            if pointer_xywh[0] <= center_c[0] and pointer_xywh[1] <= center_c[1]:
+                pointer_tip_c = np.array([pointer_xywh[0] - 1 / 2 * pointer_xywh[2],
+                                          pointer_xywh[1] - 1 / 2 * pointer_xywh[3]])
+            elif pointer_xywh[0] <= center_c[0] and pointer_xywh[1] > center_c[1]:
+                pointer_tip_c = np.array([pointer_xywh[0] - 1 / 2 * pointer_xywh[2],
+                                          pointer_xywh[1] + 1 / 2 * pointer_xywh[3]])
+            elif pointer_xywh[0] > center_c[0] and pointer_xywh[1] <= center_c[1]:
+                pointer_tip_c = np.array([pointer_xywh[0] + 1 / 2 * pointer_xywh[2],
+                                          pointer_xywh[1] - 1 / 2 * pointer_xywh[3]])
+            else:
+                pointer_tip_c = np.array([pointer_xywh[0] + 1 / 2 * pointer_xywh[2],
+                                          pointer_xywh[1] + 1 / 2 * pointer_xywh[3]])
 
             # 获取数字和中心坐标点
             # 使用k-means数字聚类

@@ -88,8 +88,9 @@ class AudioRecognition:
         idx_arr = librosa.frames_to_samples(np.arange(xdb.shape[1]), hop_length=hop_length)
         time_arr = np.array([i / total_points * total_time for i in idx_arr])
         print('xdb shape: ', xdb.shape)
+        db_max = float(f'{xdb.max():.{q}f}')
         if list_format:
             xdb = [[float(f'{j:.{q}f}') for j in i] for i in xdb]
             freq_arr = [float(f'{i:.{q-1}f}') for i in freq_arr]
             time_arr = [float(f'{i:.{q-1}f}') for i in time_arr]
-        return freq_arr, time_arr, xdb
+        return freq_arr, time_arr, xdb, db_max
