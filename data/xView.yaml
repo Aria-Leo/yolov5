@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 # DIUx xView 2018 Challenge https://challenge.xviewdataset.org by U.S. National Geospatial-Intelligence Agency (NGA)
 # --------  DOWNLOAD DATA MANUALLY and jar xf val_images.zip to 'datasets/xView' before running train command!  --------
 # Example usage: python train.py --data xView.yaml
@@ -87,7 +87,7 @@ download: |
   from PIL import Image
   from tqdm import tqdm
 
-  from utils.datasets import autosplit
+  from utils.dataloaders import autosplit
   from utils.general import download, xyxy2xywhn
 
 

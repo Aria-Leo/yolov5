@@ -1,4 +1,4 @@
-# YOLOv5 🚀 by Ultralytics, GPL-3.0 license
+# YOLOv5 🚀 by Ultralytics, AGPL-3.0 license
 # Argoverse-HD dataset (ring-front-center camera) http://www.cs.cmu.edu/~mengtial/proj/streaming/ by Argo AI
 # Example usage: python train.py --data Argoverse.yaml
 # parent
@@ -63,7 +63,7 @@ download: |
 
 
   # Download
-  dir = Path('../datasets/Argoverse')  # dataset root dir
+  dir = Path(yaml['path'])  # dataset root dir
   urls = ['https://argoverse-hd.s3.us-east-2.amazonaws.com/Argoverse-HD-Full.zip']
   download(urls, dir=dir, delete=False)
 
