@@ -18,6 +18,7 @@ gas_plate_model = 'gas_plate.pt'
 gas_number_model = 'gas_number-v3.pt'
 pressure_plate_model = 'pressure_plate-v2.pt'
 pressure_pointer_model = 'pressure_pointer-v3.pt'
+temp_model = 'temp-v3.pt'
 abnormal_save_folder_gas = os.path.join('active', 'abnormal', 'gas')
 abnormal_save_folder_pressure = os.path.join('active', 'abnormal', 'pressure')
 abnormal_counts_limit = 500
@@ -38,3 +39,17 @@ gas_number_training_cfg = {
     'nosave': True,
     'noplots': True
 }
+
+audio_type_reflect = {
+    '1000': '1#直燃机正面',
+    '1001': '1#直燃机右侧',
+    '1002': '2#直燃机左侧',
+    '1003': '2#直燃机正面',
+    '1004': '1#冷却水泵',
+    '1005': '1#冷温水泵',
+    '1006': '2#冷却水泵',
+    '1007': '2#冷温水泵',
+    '1008': '1#直燃机',
+    '1009': '2#直燃机'
+}
+audio_samples_path = os.path.join('data', 'audio', 'audio_samples.pickle')

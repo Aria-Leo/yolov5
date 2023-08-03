@@ -20,7 +20,7 @@ from utils.metrics_extra import nms
 
 class GasNumberRecognition:
 
-    def __init__(self, model_path=None, model_name=None, nms_conf=0.3, iou=0.25):
+    def __init__(self, model_path=None, model_name=None, conf=0.3, iou=0.25):
         self.model_path = model_path
         self.model_name = model_name
         print('model path:', os.path.join(model_path, 'models_pt', model_name))
@@ -30,49 +30,10 @@ class GasNumberRecognition:
                                         source='local')
         else:
             self.model = None
-        self.model.conf = nms_conf
+        self.model.conf = conf
         self.model.iou = iou
 
     def predict(self, image, inference_size=288):
-        result = self.model(image, size=inference_size, augment=True)
-        predict_df = result.pandas().xyxy[0]
-        res, sort_key = [], []
-        if not predict_df.empty:
-            # 根据坐标构建特征对图片进行聚类，将数字分组
-            features = np.array([[(s['xmax'] + s['xmin']) / 2, s['ymax'] * 5]
-                                 for _, s in predict_df.iterrows()])
-            labels = predict_df['name'].values
-            # choose_clusters = 6
-            choose_clusters, choose_ss = 1, 0  # 通过轮廓系数选定最优的聚类数
-            for c in range(2, min(labels.shape[0] - 1, 11)):
-                agg = KMeans(n_clusters=c)
-                pre = agg.fit_predict(features)
-                ss = silhouette_score(features, pre)
-                if ss > choose_ss:
-                    choose_ss = ss
-                    choose_clusters = c
-            print(f'choose clusters: {choose_clusters}')
-            agg = KMeans(n_clusters=choose_clusters)
-            pre = agg.fit_predict(features)
-            # 存储识别结果
-            for i in range(choose_clusters):
-                ln_idx = np.argwhere(pre == i).flatten()
-                ln_sort_idx = np.argsort(features[ln_idx, 0].flatten())
-                res_arr = labels[ln_idx][ln_sort_idx]
-                res_str = ''.join(res_arr)
-                res.append(res_str)
-                temp_key = features[ln_idx][ln_sort_idx][-1]
-                sort_key.append((temp_key[0], temp_key[1]))
-            sort_key = np.array(sort_key, dtype=[('x', '<f8'), ('y', '<f8')])
-            sort_idx = np.argsort(sort_key, order=('y', 'x'))
-            res = np.array(res, dtype='U25')[sort_idx]
-        else:
-            res = np.array(res)
-        print(predict_df)
-        print(res)
-        return predict_df, res
-
-    def predict_opt(self, image, inference_size=288):
         """
         根据输入的图片返回识别读数
         输入图片为表盘识别的输出结果
@@ -260,7 +221,7 @@ class GasNumberRecognition:
 
 class GasPlateRecognition:
 
-    def __init__(self, model_path=None, model_name=None, nms_conf=0.7, max_det=1):
+    def __init__(self, model_path=None, model_name=None, conf=0.7, max_det=1):
         self.model_path = model_path
         self.model_name = model_name
         if model_path is not None and model_name is not None:
@@ -269,7 +230,7 @@ class GasPlateRecognition:
                                         source='local')
         else:
             self.model = None
-        self.model.conf = nms_conf
+        self.model.conf = conf
         self.model.max_det = max_det
 
     def predict(self, image, crop_path=None, inference_size=800):
@@ -321,7 +282,7 @@ class NumberRecognition:
         self.plate_model = GasPlateRecognition(model_path, plate_model_name)
         self.number_model = GasNumberRecognition(model_path, number_model_name)
 
-    def predict(self, image):
+    def predict(self, image, *args):
         """
         根据输入图片，返回识别结果和对应的状态码
         Args:
@@ -341,12 +302,18 @@ class NumberRecognition:
         status_code, number_res = 0, []
         predict_df = pd.DataFrame()
         if plate_abnormal_info[1] == 0:
-            predict_df, number_res = self.number_model.predict_opt(plate_res)
+            predict_df, number_res = self.number_model.predict(plate_res)
             number_abnormal_info = self.number_model.check_result(predict_df, number_res)
             status_code = number_abnormal_info[1]
         else:
             status_code = plate_abnormal_info[1]
-        return plate_res, predict_df, status_code, list(number_res)
+        res = {
+            'plate_res': [plate_res],
+            'predict_df': [predict_df],
+            'status_code': status_code,
+            'number_res': list(number_res)
+        }
+        return res
 
 
 if __name__ == '__main__':
@@ -356,7 +323,7 @@ if __name__ == '__main__':
     normal_image_path = 'D:\\demo\\GasMeterData_pre\\active\\abnormal\\images\\img202210172302091608.jpg'
     test_image_path = 'D:\\demo\\yolov5\\data\\images\\current_gas_plate.jpg'
     number_model = GasNumberRecognition(m_path, number_m_name)
-    number_model.predict_opt(normal_image_path)
+    number_model.predict(normal_image_path)
     # nr = NumberRecognition(m_path, plate_m_name, number_m_name)
     # pre_res = nr.predict(normal_image_path)
     # print(pre_res)

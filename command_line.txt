@@ -9,4 +9,8 @@
 docker run -d -p 8088:8088 -v /root/yolov5:/usr/src/yolov5 -v /root/GasMeterNumber:/usr/src/GasMeterNumber --name yolov5 yolov5:v3
 压力表数字识别 --img 640 --weights $FileDir$\models_pt\pressure_pointer-v1.pt --source D:\demo\PressureMeterData\MeterPointer\images\val --conf-thres 0.5 --hide-conf --line-thickness 1 --save-txt
 
-{"data_type": "pressure", "b64": ""}
+红外温度识别训练
+--img 640 --batch 5 --epochs 1000 --data Temperature.yaml --weights models_pt\temp-v2.pt --optimizer AdamW --rect --patience 200 --multi-scale 
+--name temp-v3 --save-period 100
+红外温度刻度条识别
+--img 960 --weights $FileDir$\models_pt\temp-v2.pt --source D:\demo\TempData\images\val --conf-thres 0.5 --line-thickness 1 --save-txt --name temp-v2

@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import librosa
 import librosa.display
+import pickle
+from sklearn.cluster import KMeans
+from sklearn.ensemble import IsolationForest
 sns.set_style("darkgrid")
 
 
@@ -94,3 +97,25 @@ class AudioRecognition:
             freq_arr = [float(f'{i:.{q-1}f}') for i in freq_arr]
             time_arr = [float(f'{i:.{q-1}f}') for i in time_arr]
         return freq_arr, time_arr, xdb, db_max
+
+    def abnormal_detect(self, item_id, normal_data_path):
+        with open(normal_data_path, 'rb') as f:
+            features_dict = pickle.load(f)
+        feature_samples = features_dict[item_id]
+        mfccs = librosa.feature.mfcc(y=self.audio, sr=self.sr, n_mfcc=20,
+                                     hop_length=1024, window='hamming').flatten()
+        mfccs = np.expand_dims(mfccs, 0)
+        features = np.concatenate([feature_samples, mfccs], axis=0)
+        features_length = features.shape[0]
+        km_model_obj = KMeans(n_clusters=2)
+        if_model_obj = IsolationForest()
+        km_pre = km_model_obj.fit_predict(features)
+        if_model_obj.fit(features)
+        if_pre = if_model_obj.predict(features)
+        if_scores = -if_model_obj.score_samples(features)
+        condition_1 = km_pre[-1] == 1 and np.sum(km_pre) == 1
+        condition_2 = if_pre[-1] == -1 and np.argmax(if_scores) == features_length - 1
+        abnormal_flag = False
+        if condition_1 and condition_2:
+            abnormal_flag = True
+        return abnormal_flag

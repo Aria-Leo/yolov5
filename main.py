@@ -23,7 +23,9 @@ import model_cfg
 from audio_recognition import AudioRecognition
 from number_recognition import NumberRecognition
 from pointer_recognition import PointerRecognition
+from temperature_recognition import TemperatureRecognition
 from data_process import ALDetector
+import traceback
 
 app = FastAPI()
 # 设置允许访问的域名
@@ -45,7 +47,6 @@ max_cache_length = 30
 @app.get("/recognition_dev", tags=["get current gas meter predict number"])
 def pred_cur_num(item_id=None):
     """
-    通过输入参数  camera_num ，对当面时间的摄像头进行预测
     :param item_id: 燃气表编号
     :return:
     """
@@ -83,29 +84,33 @@ def pred_cur_num(item_id=None):
 
 @app.post("/recognition", tags=["get current gas meter predict number"])
 def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', embed=True),
-             item_id: str = Body(None, embed=True)):
+             item_id: str = Body(None, embed=True), area_coordinate: list = Body(None, embed=True)):
     """
-    通过输入参数  camera_num ，对当面时间的摄像头进行预测
     :param b64: 图片base64地址
     :param data_type: 数据类型
     :param item_id: 图片标识，用于缓存队列校验使用
+    :param area_coordinate: 表盘参考区域
     :return:
     """
     plate_model = model_cfg.gas_plate_model
     number_model = model_cfg.gas_number_model
     abnormal_save_folder = model_cfg.abnormal_save_folder_gas
     recognition_class = NumberRecognition
+    area_coordinate_ = None
     if data_type == 'pressure':
         plate_model = model_cfg.pressure_plate_model
         number_model = model_cfg.pressure_pointer_model
         abnormal_save_folder = model_cfg.abnormal_save_folder_pressure
         recognition_class = PointerRecognition
+        area_coordinate_ = area_coordinate
     try:
         img_string = base64.b64decode(b64)
         img_arr = np.frombuffer(img_string, np.uint8)
         image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
         pr = recognition_class(model_cfg.model_path, plate_model, number_model)
-        plate_res, predict_df, status_code, predict_res = pr.predict(image)
+        res_dict = pr.predict(image, area_coordinate_)
+        plate_res, predict_df = res_dict['plate_res'], res_dict['predict_df']
+        status_code, predict_res = res_dict['status_code'], res_dict['number_res']
 
         # 缓存历史值校验总量
         if data_type == 'gas' and item_id is not None:
@@ -147,21 +152,22 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
                 image_suffix = datetime.now().strftime('%Y%m%d%H%M%S%f')[:-2]
 
             # 检测表盘
-            if len(plate_res) > 0:
-                cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'),
-                            plate_res[:, :, ::-1])
+            for idx, sub_plate in enumerate(plate_res):
+                if sub_plate is not None and len(sub_plate) > 0:
+                    cv2.imwrite(os.path.join(abnormal_save_image_path, f'img{image_suffix}.jpg'),
+                                sub_plate[:, :, ::-1])
 
-                # 预测结果存储到txt文件
-                with open(os.path.join(abnormal_save_label_path, f'img{image_suffix}.txt'), 'w') as f:
-                    for _, s in predict_df.iterrows():
-                        label_class = f'{s["class"]}'
-                        label_xcenter = f'{s["xcenter"]:.6f}'
-                        label_ycenter = f'{s["ycenter"]:.6f}'
-                        label_width = f'{s["width"]:.6f}'
-                        label_height = f'{s["height"]:.6f}'
-                        label = ' '.join([label_class, label_xcenter,
-                                          label_ycenter, label_width, label_height])
-                        f.write(f'{label}\n')
+                    # 预测结果存储到txt文件
+                    with open(os.path.join(abnormal_save_label_path, f'img{image_suffix}.txt'), 'w') as f:
+                        for _, s in predict_df[idx].iterrows():
+                            label_class = f'{s["class"]}'
+                            label_xcenter = f'{s["xcenter"]:.6f}'
+                            label_ycenter = f'{s["ycenter"]:.6f}'
+                            label_width = f'{s["width"]:.6f}'
+                            label_height = f'{s["height"]:.6f}'
+                            label = ' '.join([label_class, label_xcenter,
+                                              label_ycenter, label_width, label_height])
+                            f.write(f'{label}\n')
 
         current_time = time.strftime('%Y-%m-%d %H:%M:%S')
         res = {
@@ -169,24 +175,59 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
             "status_code": status_code,
             "predict_number": predict_res
         }
+        print(res)
         if data_type == 'gas':
             res['valid_flag'] = True if 0 <= status_code <= 4 or status_code == 10 else False
         elif data_type == 'pressure':
+            res['labeled_image'] = res_dict['labeled_image']
             res['valid_flag'] = True if status_code == 0 else False
-        print(res)
         result = JSONResponse(status_code=200, content=res)
     except ValueError:
+        traceback.print_exc()
+        result = HTTPException(status_code=404, detail="请输入有效的base64图片!")
+    return result
+
+
+@app.post("/temp", tags=["get temperature for object(i.e. pump)"])
+def pred_temp(b64: str = Body(None, embed=True), item_id: str = Body(None, embed=True),
+              area_coordinate: list = Body(None, embed=True)):
+    """
+    :param b64: 图片base64地址
+    :param item_id: 图片标识
+    :param area_coordinate: 目标区域坐标
+    :return:
+    """
+    temp_model = model_cfg.temp_model
+    try:
+        img_string = base64.b64decode(b64)
+        img_arr = np.frombuffer(img_string, np.uint8)
+        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
+        tr = TemperatureRecognition(model_cfg.model_path, temp_model)
+        predict_res, base64_img, status_code = tr.predict(image, item_id=item_id, area_coordinate=area_coordinate)
+
+        current_time = time.strftime('%Y-%m-%d %H:%M:%S')
+        res = {
+            "time": current_time,
+            'status_code': status_code,
+            "predict_temp": predict_res,
+            "labeled_image": base64_img
+        }
+        result = JSONResponse(status_code=200, content=res)
+    except ValueError:
+        traceback.print_exc()
         result = HTTPException(status_code=404, detail="请输入有效的base64图片!")
     return result
 
 
 @app.post("/audio", tags=["get audio analysis"])
-def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', embed=True)):
+def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', embed=True),
+          item_id: str = Body(None, embed=True)):
     """
     音频识别，返回声谱图和声压振幅曲线数据
     Args:
         b64: base64格式的图片数据
         data_type: amplitude | spectrogram
+        item_id:
 
     Returns:
 
@@ -200,7 +241,6 @@ def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', 
         decode_string = base64.b64decode(b64)
         wav_file.write(decode_string)
         wav_file.close()
-        res = {}
         if data_type == 'amplitude':
             ar_obj = AudioRecognition(temp_file, sr=100)
             time_arr, audio_arr = ar_obj.get_amplitude_curve(list_format=True)
@@ -218,8 +258,15 @@ def audio(b64: str = Body(None, embed=True), data_type: str = Body('amplitude', 
                 'spectrogram': xdb,
                 'db_max': db_max
             }
+        else:  # audio abnormal detection
+            ar_obj = AudioRecognition(temp_file)
+            abnormal_flag = ar_obj.abnormal_detect(item_id, model_cfg.audio_samples_path)
+            res = {
+                'abnormal_flag': abnormal_flag
+            }
         result = JSONResponse(status_code=200, content=res)
     except ValueError:
+        traceback.print_exc()
         result = HTTPException(status_code=404, detail="请输入有效的base64音频!")
     return result
 

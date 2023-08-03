@@ -22,7 +22,7 @@ from utils.metrics_extra import nms
 
 class PressurePointerRecognition:
 
-    def __init__(self, model_path=None, model_name=None, nms_conf=0.5, iou=0.25):
+    def __init__(self, model_path=None, model_name=None, conf=0.5, iou=0.25):
         self.model_path = model_path
         self.model_name = model_name
         if model_path is not None and model_name is not None:
@@ -31,7 +31,7 @@ class PressurePointerRecognition:
                                         source='local')
         else:
             self.model = None
-        self.model.conf = nms_conf
+        self.model.conf = conf
         self.model.iou = iou
 
     def predict(self, image, inference_size=640):
@@ -50,7 +50,7 @@ class PressurePointerRecognition:
 
         """
         result = self.model(image, size=inference_size, augment=True)
-        predict_df, scale_numbers, res = result.pandas().xywhn[0], None, None
+        predict_df, scale_numbers, res, base64_str = result.pandas().xywhn[0], None, None, None
         predict_df = nms(predict_df)
         # 检查表盘中心、半指针、刻度和数字是否都存在，若不存在则不予检测
         valid_flag = 1
@@ -157,7 +157,9 @@ class PressurePointerRecognition:
                 (1 + slope_scale_left * slope_scale_right) / np.sqrt(1 + slope_scale_left ** 2) / np.sqrt(
                     1 + slope_scale_right ** 2))
 
-            res = use_scale_numbers[0] + angle_left_tip / angle_left_right * (use_scale_numbers[1] - use_scale_numbers[0])
+            res = (use_scale_numbers[0] + angle_left_tip / angle_left_right
+                   * (use_scale_numbers[1] - use_scale_numbers[0]))
+
         return predict_df, scale_numbers, res
 
     @staticmethod
@@ -184,7 +186,7 @@ class PressurePointerRecognition:
 
 class PressurePlateRecognition:
 
-    def __init__(self, model_path=None, model_name=None, nms_conf=0.7, max_det=1):
+    def __init__(self, model_path=None, model_name=None, conf=0.7, max_det=2):
         self.model_path = model_path
         self.model_name = model_name
         if model_path is not None and model_name is not None:
@@ -193,15 +195,16 @@ class PressurePlateRecognition:
                                         source='local')
         else:
             self.model = None
-        self.model.conf = nms_conf
+        self.model.conf = conf
         self.model.max_det = max_det
 
-    def predict(self, image, crop_path=None, inference_size=640):
+    def predict(self, image, crop_path=None, area_coordinate=None, inference_size=640):
         """
         根据原始输入图片，返回表盘识别区域
         Args:
             image: (height, width, 3)
             crop_path: 截取表盘图片存储路径
+            area_coordinate:
             inference_size:
 
         Returns:
@@ -212,19 +215,27 @@ class PressurePlateRecognition:
             crop = result.crop(save=True, save_dir=crop_path)
         else:
             crop = result.crop(save=False)
-        res = np.array([])
-        if len(crop) > 0:
-            res = crop[0]['im']
-        return res
+        order_crop = [s_c['im'] for s_c in crop]
+        predict_df = result.pandas().xywhn[0]
+        if area_coordinate is not None:
+            order_crop = [None] * len(area_coordinate)
+            order_coordinate = [None] * len(area_coordinate)
+            for i, p_a in predict_df.iterrows():
+                dist, sub_idx = np.inf, 0
+                pre_xy = p_a[['xcenter', 'ycenter']].values
+                for idx, sub_area in enumerate(area_coordinate):
+                    sub_x, sub_y = sub_area[0], sub_area[1]
+                    pre_dist = np.sqrt((pre_xy[0] - sub_x) ** 2 + (pre_xy[1] - sub_y) ** 2)
+                    if pre_dist < dist:
+                        dist = pre_dist
+                        sub_idx = idx
+                order_crop[sub_idx] = crop[i]['im']
+                order_coordinate[sub_idx] = p_a[['xcenter', 'ycenter', 'width', 'height']].tolist()
+        else:
+            order_coordinate = [s[['xcenter', 'ycenter', 'width', 'height']].tolist()
+                                for _, s in predict_df.iterrows()]
 
-    @staticmethod
-    def check_result(res):
-        print(res.shape)
-        abnormal_details, status_code = '', 0
-        if len(res) == 0:
-            abnormal_details = '未检测到表盘'
-            status_code = -1
-        return abnormal_details, status_code
+        return order_crop, order_coordinate
 
 
 class PointerRecognition:
@@ -236,33 +247,65 @@ class PointerRecognition:
         self.plate_model = PressurePlateRecognition(model_path, plate_model_name)
         self.number_model = PressurePointerRecognition(model_path, number_model_name)
 
-    def predict(self, image):
+    def predict(self, image, area_coordinate=None):
         """
         根据输入图片，返回指针读数识别结果
         表盘识别+指针读数识别封装
         Args:
             image:
+            area_coordinate:
 
         Returns:
 
         """
-        plate_res = self.plate_model.predict(image)
-        # if len(plate_res) > 0:
-        #     if not isinstance(image, str):
-        #         output_res = plate_res[:, :, ::-1]
-        #     else:
-        #         output_res = plate_res
-        #     cv2.imwrite('data/images/current_pressure_plate.jpg', output_res)
-        plate_abnormal_info = self.plate_model.check_result(plate_res)
-        status_code, number_res = 0, None
-        predict_df = pd.DataFrame()
-        if plate_abnormal_info[1] == 0:
-            predict_df, scale_numbers, number_res = self.number_model.predict(plate_res)
-            number_abnormal_info = self.number_model.check_result(scale_numbers, number_res)
-            status_code = number_abnormal_info[1]
-        else:
-            status_code = plate_abnormal_info[1]
-        return plate_res, predict_df, status_code, number_res
+        plate_res_list, plate_coordinate = self.plate_model.predict(
+            image, area_coordinate=area_coordinate)
+        status_code, number_res, predict_dfs = -1, [], []
+        for plate_res in plate_res_list:
+            if plate_res is None:
+                number_res.append(None)
+                predict_dfs.append(None)
+                continue
+            predict_df, scale_numbers, num = self.number_model.predict(plate_res)
+            number_abnormal_info = self.number_model.check_result(scale_numbers, num)
+            sub_status_code = number_abnormal_info[1]
+            if status_code == -1:
+                status_code = sub_status_code
+            else:
+                status_code = min(status_code, sub_status_code)
+            number_res.append(num)
+            predict_dfs.append(predict_df)
+
+        # 图片读数标注
+        cv_image = image[..., ::-1].copy()
+        for xywh, num in zip(plate_coordinate, number_res):
+            if xywh is None or num is None:
+                continue
+            x_range = (int((xywh[0] - xywh[2] / 2) * image.shape[1]),
+                       int((xywh[0] + xywh[2] / 2) * image.shape[1]))
+            y_range = (int((xywh[1] - xywh[3] / 2) * image.shape[0]),
+                       int((xywh[1] + xywh[3] / 2) * image.shape[0]))
+            cv_image = cv2.rectangle(cv_image, (x_range[0], y_range[0]),
+                                     (x_range[1], y_range[1]), (0, 0, 255), 2)
+            text_x = int(xywh[0] * image.shape[1])
+            text_y = int((xywh[1] - xywh[3] / 2) * image.shape[0])
+            shift_x = int(image.shape[1] * 0.01)
+            shift_y = int(image.shape[0] * 0.01)
+            cv2.putText(cv_image, f'{num:.2f}', (text_x - shift_x, text_y - shift_y),
+                        cv2.FONT_HERSHEY_PLAIN, 5.0, (255, 255, 255), 5)
+
+        base64_img = cv2.imencode('.jpg', cv_image)[1].tostring()
+        base64_img = base64.b64encode(base64_img)
+        base64_str = str(base64_img, 'utf-8')
+
+        res = {
+            'plate_res': plate_res_list,
+            'predict_df': predict_dfs,
+            'status_code': status_code,
+            'number_res': number_res,
+            'labeled_image': base64_str
+        }
+        return res
 
 
 if __name__ == '__main__':
