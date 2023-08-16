@@ -106,7 +106,9 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
     try:
         img_string = base64.b64decode(b64)
         img_arr = np.frombuffer(img_string, np.uint8)
-        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
+        # image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
+        # 最新模型输入是BGR, crop输出的图片是RGB
+        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
         pr = recognition_class(model_cfg.model_path, plate_model, number_model)
         res_dict = pr.predict(image, area_coordinate_)
         plate_res, predict_df = res_dict['plate_res'], res_dict['predict_df']
