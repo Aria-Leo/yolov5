@@ -203,7 +203,7 @@ def pred_temp(b64: str = Body(None, embed=True), item_id: str = Body(None, embed
     try:
         img_string = base64.b64decode(b64)
         img_arr = np.frombuffer(img_string, np.uint8)
-        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]  # BGR to RGB
+        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
         tr = TemperatureRecognition(model_cfg.model_path, temp_model)
         predict_res, base64_img, status_code = tr.predict(image, item_id=item_id, area_coordinate=area_coordinate)
 

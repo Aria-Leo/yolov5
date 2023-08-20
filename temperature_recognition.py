@@ -131,7 +131,7 @@ class TemperatureRecognition:
             else:
                 area_reflect = self.get_area(item_id)
 
-            cv_image = image[..., ::-1]
+            cv_image = image.copy()
             for area in area_reflect:
                 x_range = [area[0] - area[2] / 2,
                            area[0] + area[2] / 2]
