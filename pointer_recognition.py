@@ -277,7 +277,7 @@ class PointerRecognition:
             predict_dfs.append(predict_df)
 
         # 图片读数标注
-        cv_image = image[..., ::-1].copy()
+        cv_image = image.copy()
         for xywh, num in zip(plate_coordinate, number_res):
             if xywh is None or num is None:
                 continue
@@ -320,7 +320,7 @@ if __name__ == '__main__':
     b64 = str(base64.b64encode(b), 'utf-8')
     dim = base64.b64decode(b64)
     img_arr = np.frombuffer(dim, np.uint8)
-    im = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)[:, :, ::-1]
+    im = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
     nr = PointerRecognition(m_path, plate_m_name, pointer_m_name)
     pre_res = nr.predict(im)
     for item in pre_res:

@@ -286,7 +286,7 @@ class NumberRecognition:
         """
         根据输入图片，返回识别结果和对应的状态码
         Args:
-            image: RGB format
+            image: BGR format
 
         Returns:
 
