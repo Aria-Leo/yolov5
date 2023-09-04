@@ -14,3 +14,20 @@ docker run -d -p 8088:8088 -v /root/yolov5:/usr/src/yolov5 -v /root/GasMeterNumb
 --name temp-v3 --save-period 100
 红外温度刻度条识别
 --img 960 --weights $FileDir$\models_pt\temp-v2.pt --source D:\demo\TempData\images\val --conf-thres 0.5 --line-thickness 1 --save-txt --name temp-v2
+
+图像分类训练
+yolov5
+python train.py --model /mnt/sdb/recognition/models/yolov5s-cls.pt --data /mnt/sdb/dataset/pedestrain_timm --epochs 10 --batch-size 64 --img 288 --name human --optimizer AdamW
+
+yolov8
+# project=/mnt/sdb/recognition/runs/train-cls
+yolo classify train data=/mnt/sdb/dataset/human_other_cls model=/mnt/sdb/recognition/models/yolov8s-cls.pt epochs=10 batch=64 imgsz=288 name=human_yolov8 optimizer=AdamW lr0=0.001 label_smoothing=0.1 weight_decay=0.00005
+
+predict
+yolo classify predict source=/mnt/sdb/dataset/human_other_cls/test_pre model=/mnt/sdb/recognition/models/yolov8s-cls.pt imgsz=224 save_txt=True
+yolo train data=imagenet model=/mnt/sdb/recognition/models/yolov8s-cls.pt epochs=1 imgsz=224
+# https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
+
+davit
+python train.py /mnt/sdb/dataset/pedestrain_timm --batch-size 64 --img-size 224 --lr 2e-3 --native-amp --clip-grad 1.0 --epochs 50 --pretrained
+(pretrained load path: /root/.cache/torch/hub/checkpoints/)

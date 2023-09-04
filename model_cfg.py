@@ -40,16 +40,4 @@ gas_number_training_cfg = {
     'noplots': True
 }
 
-audio_type_reflect = {
-    '1000': '1#直燃机正面',
-    '1001': '1#直燃机右侧',
-    '1002': '2#直燃机左侧',
-    '1003': '2#直燃机正面',
-    '1004': '1#冷却水泵',
-    '1005': '1#冷温水泵',
-    '1006': '2#冷却水泵',
-    '1007': '2#冷温水泵',
-    '1008': '1#直燃机',
-    '1009': '2#直燃机'
-}
-audio_samples_path = os.path.join('data', 'audio', 'audio_samples.pickle')
+audio_samples_path = os.path.join('data', 'audio', 'features_v2.pickle')

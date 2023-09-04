@@ -98,23 +98,26 @@ class AudioRecognition:
             time_arr = [float(f'{i:.{q-1}f}') for i in time_arr]
         return freq_arr, time_arr, xdb, db_max
 
-    def abnormal_detect(self, item_id, normal_data_path):
+    def abnormal_detect(self, normal_data_path):
         with open(normal_data_path, 'rb') as f:
-            features_dict = pickle.load(f)
-        feature_samples = features_dict[item_id]
-        mfccs = librosa.feature.mfcc(y=self.audio, sr=self.sr, n_mfcc=20,
-                                     hop_length=1024, window='hamming').flatten()
-        mfccs = np.expand_dims(mfccs, 0)
-        features = np.concatenate([feature_samples, mfccs], axis=0)
-        features_length = features.shape[0]
+            sample_features = pickle.load(f)
+        mfcc = librosa.feature.mfcc(y=self.audio, sr=self.sr, n_mfcc=20,
+                                     hop_length=1024, window='hamming').T
+        current_sample_length = mfcc.shape[0]
+        features = np.concatenate([mfcc, sample_features], axis=0)
         km_model_obj = KMeans(n_clusters=2)
         if_model_obj = IsolationForest()
         km_pre = km_model_obj.fit_predict(features)
         if_model_obj.fit(features)
         if_pre = if_model_obj.predict(features)
-        if_scores = -if_model_obj.score_samples(features)
-        condition_1 = km_pre[-1] == 1 and np.sum(km_pre) == 1
-        condition_2 = if_pre[-1] == -1 and np.argmax(if_scores) == features_length - 1
+
+        other_samples_pre = km_pre[current_sample_length:]
+        os_pre_pos_ratio = np.sum(other_samples_pre) / other_samples_pre.shape[0]
+        normal_flag = 1 if os_pre_pos_ratio > 0.5 else 0
+        current_sample_normal = np.sum(km_pre[:current_sample_length] == normal_flag, dtype=int)
+        condition_1 = (current_sample_normal / current_sample_length) < 0.1
+        current_sample_abnormal = np.sum(if_pre[:current_sample_length] == -1, dtype=int)
+        condition_2 = (current_sample_abnormal / current_sample_length) > 0.95
         abnormal_flag = False
         if condition_1 and condition_2:
             abnormal_flag = True
