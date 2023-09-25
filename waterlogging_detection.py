@@ -13,11 +13,11 @@ class WaterloggingDetection:
             if image is None:
                 raise ValueError
             model = YOLO(self.model_path)
-            results = model.predict(image, classes=0)
-            print('waterlogging detection boxes: ')
-            res = results[0].boxes
-            print(res)
-            if res.shape[0] > 0:
+            results = model.predict(image, imgsz=416, augment=True)
+            res = results[0].probs.top1
+            res_str = 'have waterlogging!' if res == 1 else "don't have waterlogging"
+            print('waterlogging prediction: ', res_str)
+            if res == 1:
                 detection_res = True
         except:
             status_code = 1
