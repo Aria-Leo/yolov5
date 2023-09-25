@@ -25,6 +25,7 @@ from number_recognition import NumberRecognition
 from pointer_recognition import PointerRecognition
 from temperature_recognition import TemperatureRecognition
 from human_detection import HumanDetection
+from waterlogging_detection import WaterloggingDetection
 from data_process import ALDetector
 import traceback
 
@@ -234,6 +235,38 @@ def pred_human(b64: str = Body(None, embed=True)):
         img_arr = np.frombuffer(img_string, np.uint8)
         image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
         tr = HumanDetection(model_cfg.model_path)
+        detection_res, status_code = tr.predict(image)
+
+        res = {
+            "time": current_time,
+            'status_code': status_code,
+            'detection_res': detection_res
+        }
+        print(res)
+        result = JSONResponse(status_code=200, content=res)
+    except ValueError:
+        traceback.print_exc()
+        res = {
+            "time": current_time,
+            'status_code': 1,
+            'detection_res': False
+        }
+        result = JSONResponse(status_code=200, content=res)
+    return result
+
+
+@app.post("/waterlogging", tags=["waterlogging recognition"])
+def pred_waterlogging(b64: str = Body(None, embed=True)):
+    """
+    :param b64: 图片base64地址
+    :return:
+    """
+    current_time = time.strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        img_string = base64.b64decode(b64)
+        img_arr = np.frombuffer(img_string, np.uint8)
+        image = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+        tr = WaterloggingDetection(model_cfg.model_path)
         detection_res, status_code = tr.predict(image)
 
         res = {

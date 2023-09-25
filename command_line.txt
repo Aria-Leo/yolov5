@@ -21,7 +21,7 @@ python train.py --model /mnt/sdb/recognition/models/yolov5s-cls.pt --data /mnt/s
 
 yolov8
 # project=/mnt/sdb/recognition/runs/train-cls
-yolo classify train data=/mnt/sdb/dataset/human_other_cls model=/mnt/sdb/recognition/models/yolov8s-cls.pt epochs=10 batch=64 imgsz=288 name=human_yolov8 optimizer=AdamW lr0=0.001 label_smoothing=0.1 weight_decay=0.00005
+yolo classify train data=/mnt/sdb/dataset/water model=/mnt/sdb/recognition/models/yolov8s-cls.pt epochs=500 batch=8 imgsz=416 name=water optimizer=AdamW lr0=0.001 project=/mnt/sdb/recognition/runs/train-cls close_mosaic=0 patience=100
 
 predict
 yolo classify predict source=/mnt/sdb/dataset/human_other_cls/test_pre model=/mnt/sdb/recognition/models/yolov8s-cls.pt imgsz=224 save_txt=True
