@@ -2,7 +2,7 @@
 
 图像识别相关算法
 
-API说明:
+## API说明:
 
 以url的形式访问, 通过post方式提交, 参数以json方式写入body: 192.168.2.123:8088/recognition {"data_type": "pressure", "b64": ""}
 
@@ -17,3 +17,6 @@ data_type表示识别设备类型，不传该参数时默认识别燃气表，�
 
 2.燃气表识别
 ![燃气表识别示例](data/images/gas_recognition_example.png)
+
+## docker部署示例    
+docker run -d -p 8088:8088 -v /root/recognition:/usr/src/recognition -v /root/GasMeterNumber:/usr/src/GasMeterNumber --runtime=nvidia --gpus all --name recognition-gpu recognition-gpu:v2
