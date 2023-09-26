@@ -88,6 +88,7 @@ def pred_cur_num(item_id=None):
 def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', embed=True),
              item_id: str = Body(None, embed=True), area_coordinate: list = Body(None, embed=True)):
     """
+    燃气表|压力表读数识别
     :param b64: 图片base64地址
     :param data_type: 数据类型
     :param item_id: 图片标识，用于缓存队列校验使用
@@ -196,6 +197,7 @@ def pred_num(b64: str = Body(None, embed=True), data_type: str = Body('gas', emb
 def pred_temp(b64: str = Body(None, embed=True), item_id: str = Body(None, embed=True),
               area_coordinate: list = Body(None, embed=True)):
     """
+    红外温度识别
     :param b64: 图片base64地址
     :param item_id: 图片标识
     :param area_coordinate: 目标区域坐标
@@ -226,6 +228,7 @@ def pred_temp(b64: str = Body(None, embed=True), item_id: str = Body(None, embed
 @app.post("/human", tags=["human recognition"])
 def pred_human(b64: str = Body(None, embed=True)):
     """
+    人员闯入图像识别，检测图片中是否有人(使用yolov8模型)
     :param b64: 图片base64地址
     :return:
     """
@@ -258,6 +261,7 @@ def pred_human(b64: str = Body(None, embed=True)):
 @app.post("/waterlogging", tags=["waterlogging recognition"])
 def pred_waterlogging(b64: str = Body(None, embed=True)):
     """
+    水渍检测识别(分类模型，使用yolov8训练)
     :param b64: 图片base64地址
     :return:
     """

@@ -20,7 +20,7 @@ yolov5
 python train.py --model /mnt/sdb/recognition/models/yolov5s-cls.pt --data /mnt/sdb/dataset/pedestrain_timm --epochs 10 --batch-size 64 --img 288 --name human --optimizer AdamW
 
 yolov8
-# project=/mnt/sdb/recognition/runs/train-cls
+水渍检测分类模型训练
 yolo classify train data=/mnt/sdb/dataset/water model=/mnt/sdb/recognition/models/yolov8s-cls.pt epochs=500 batch=8 imgsz=416 name=water optimizer=AdamW lr0=0.001 project=/mnt/sdb/recognition/runs/train-cls close_mosaic=0 patience=100
 
 predict
